@@ -3,6 +3,8 @@ import numpy as np
 import mediapipe as mp
 import openface
 import dlib
+import face_recognition
+#from deepface import DeepFace
 
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
@@ -89,29 +91,71 @@ def face_embedding(img, pos):
     else:
         return None
 
+def face_embedding_face_recognition(img, pos):
+    p1 = img[pos["y"]:pos["h"] + pos["y"], pos["x"]:pos["x"] + pos["w"]].copy()
+    #cv2.imshow("p1", p1)
+
+    p2 = face_align.align(534, p1, landmarkIndices=openface.AlignDlib.OUTER_EYES_AND_NOSE)
+    if p2 is not None:
+        p2 = cv2.resize(p2, (150, 150))
+        #face_descriptor = facerec.compute_face_descriptor(p2)
+        #return np.array(face_descriptor)
+        return np.array(face_recognition.face_encodings(p2))
+    else:
+        return None
+
+
+def mosaic(src, ratio=0.1):
+    small = cv2.resize(src, None, fx=ratio, fy=ratio, interpolation=cv2.INTER_NEAREST)
+    return cv2.resize(small, src.shape[:2][::-1], interpolation=cv2.INTER_NEAREST)
+
+def mosaic_area(src, x, y, width, height, ratio=0.05):
+    dst = src.copy()
+    dst[y:y + height, x:x + width] = mosaic(dst[y:y + height, x:x + width], ratio)
+    return dst
+
+
 def mp_detectFace_v3(img, face_detection, width, height, facedata):
     i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     i.flags.writeable = False
     result = face_detection.process(i)
     if result.detections:
         result_img = img.copy()
+        result_img_m = img.copy()
         for detection in result.detections:
-            x = int(detection.location_data.relative_bounding_box.xmin*width) - 100
-            y = int(detection.location_data.relative_bounding_box.ymin*height) - 100
-            w = int(detection.location_data.relative_bounding_box.width*width) + 200
-            h = int(detection.location_data.relative_bounding_box.height*height) + 200
+            x = int(detection.location_data.relative_bounding_box.xmin*width)
+            y = int(detection.location_data.relative_bounding_box.ymin*height)
+            w = int(detection.location_data.relative_bounding_box.width*width)
+            h = int(detection.location_data.relative_bounding_box.height*height)
             input_pos = {"x": x, "y": y, "w": w, "h": h}
             vector = face_embedding(img, input_pos)
             if vector is not None:
                 distance = compare(facedata, vector)
             else:
-                distance = "No"
+                distance = -1
             print(distance)
 
-            cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
+            if 0 <= distance <= 0.123:
+                cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                #print("good")
+
+            else:
+                mean = result_img[y:y+h, x:x+w].copy()
+                sx, sy, sc = mean.shape
+                mean = mean.reshape(sc, sx*sy)
+                b = mean[0].sum() / (sx * sy)
+                g = mean[1].sum() / (sx * sy)
+                r = mean[2].sum() / (sx * sy)
+                #print(b,g,r)
+
+                #print(mean)
+                #result_img_m
+                cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (b, g, r), -1)
     else:
         result_img = img.copy()
-    return result_img
+        result_img_m = img.copy()
+    return np.hstack((result_img, result_img_m))
 
 def compare(v1, v2):
     v1 = v1 - v2
@@ -119,3 +163,92 @@ def compare(v1, v2):
     v1 = v1.sum()
     v1 = v1 * 1/2
     return v1
+
+
+def mp_detectFace_mosaic(img, face_detection, width, height, facedata):
+    i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    i.flags.writeable = False
+    result = face_detection.process(i)
+    if result.detections:
+        result_img = img.copy()
+        for detection in result.detections:
+            x = int(detection.location_data.relative_bounding_box.xmin*width)
+            y = int(detection.location_data.relative_bounding_box.ymin*height)
+            w = int(detection.location_data.relative_bounding_box.width*width)
+            h = int(detection.location_data.relative_bounding_box.height*height)
+            input_pos = {"x": x, "y": y, "w": w, "h": h}
+            vector = face_embedding(img, input_pos)
+            if vector is not None:
+                distance = compare(facedata, vector)
+            else:
+                distance = -1
+            print(distance)
+
+            if 0 <= distance <= 0.123:
+                #cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 0), 3)
+                print("good")
+
+            else:
+                #result_img = mosaic_area(result_img, x, y, w, h)
+                mean = result_img[y:y + h, x:x + w].copy()
+                sx, sy, sc = mean.shape
+                mean = mean.reshape(sc, sx * sy)
+                b = mean[0].sum() / (sx * sy)
+                g = mean[1].sum() / (sx * sy)
+                r = mean[2].sum() / (sx * sy)
+                # print(b,g,r)
+
+                # print(mean)
+                # result_img_m
+                cv2.rectangle(result_img, (x, y), (x + w, y + h), (b, g, r), -1)
+
+                #cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
+    else:
+        result_img = img.copy()
+    return result_img
+
+def mp_detectFace_v4(img, face_detection, width, height, facedata):
+    i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    i.flags.writeable = False
+    result = face_detection.process(i)
+    if result.detections:
+        result_img = img.copy()
+        result_img_m = img.copy()
+        for detection in result.detections:
+            x = int(detection.location_data.relative_bounding_box.xmin*width)
+            y = int(detection.location_data.relative_bounding_box.ymin*height)
+            w = int(detection.location_data.relative_bounding_box.width*width)
+            h = int(detection.location_data.relative_bounding_box.height*height)
+            input_pos = {"x": x, "y": y, "w": w, "h": h}
+            vector = face_embedding_face_recognition(img, input_pos)
+
+            if vector is not None and vector.shape[0] != 0:
+
+                vector = vector.reshape(128)
+                print(vector.shape)
+                distance = compare(facedata, vector)
+            else:
+                distance = -1
+            print(distance)
+
+            if 0 <= distance <= 0.12:
+                cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                #print("good")
+
+            else:
+                mean = result_img[y:y+h, x:x+w].copy()
+                sx, sy, sc = mean.shape
+                mean = mean.reshape(sc, sx*sy)
+                b = mean[0].sum() / (sx * sy)
+                g = mean[1].sum() / (sx * sy)
+                r = mean[2].sum() / (sx * sy)
+                #print(b,g,r)
+
+                #print(mean)
+                #result_img_m
+                cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (b, g, r), -1)
+    else:
+        result_img = img.copy()
+        result_img_m = img.copy()
+    return np.hstack((result_img, result_img_m))

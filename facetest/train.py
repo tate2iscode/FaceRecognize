@@ -4,6 +4,7 @@ import numpy as np
 import openface
 import os
 from tool import *
+import face_recognition
 
 facerec = dlib.face_recognition_model_v1('models/dlib_face_recognition_resnet_model_v1.dat')
 mp_face_detection = mp.solutions.face_detection
@@ -26,9 +27,16 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
         if len(pos) != 0:
             for p in pos:
                 p1 = img[p["y"]:p["h"] + p["y"], p["x"]:p["x"] + p["w"]].copy()
-                cv2.imwrite("p1/" + name, p1)
-                result.append(face_embedding(img, p))
-                print("추가")
+                vector = face_embedding_face_recognition(img, p)
+                
+                if vector is not None and vector.shape[0] != 0:
+                    vector = vector.reshape(128)
+                    cv2.imwrite("p1/" + name, p1)
+                    result.append(face_embedding(img, p))
+                    print("추가")
+
+
+
 
     result = np.array(result)
     np.save("p1/obama.npy", result)

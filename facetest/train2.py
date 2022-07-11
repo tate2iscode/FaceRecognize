@@ -1,8 +1,7 @@
 import cv2
-import numpy as np
+import dlib
 import mediapipe as mp
 import openface
-import dlib
 
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
