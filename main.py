@@ -9,7 +9,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 def main():
     width = 640
     height = 480
-    facedata = np.load("facetest/myfacedata.npy")
+    facedata = np.load("facetest/p3/my_face.npy")
     capture = cv2.VideoCapture(0)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -18,8 +18,8 @@ def main():
         while cv2.waitKey(33) < 0:
             ret, frame = capture.read()
             #detectFaceImg = detectFace(frame.copy())
-            #mp_detectFaceImg = mp_detectFace(frame.copy(), face_detection)
-            mp_detectFaceImg_v3 = mp_detectFace_v4(frame.copy(), face_detection, width, height, facedata)
+            #mp_detectFaceImg_v3 = mp_detectFace_v3(frame.copy(), face_detection, width, height, facedata)
+            mp_detectFaceImg_v4 = mp_detectFace_v4(frame.copy(), face_detection, width, height, facedata)
             #n = n + 1
 
 
@@ -27,10 +27,10 @@ def main():
             #show_result = np.hstack((detectFaceImg, mp_detectFaceImg))
 
 
-            show_result = mp_detectFaceImg_v3
+            show_result = mp_detectFaceImg_v4
 
 
-            cv2.imshow("video capture", show_result)
+            cv2.imshow("video capture", mp_detectFaceImg_v4)
     capture.release()
     cv2.destroyAllWindows()
 

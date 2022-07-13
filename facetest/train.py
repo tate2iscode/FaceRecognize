@@ -31,12 +31,13 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
                 
                 if vector is not None and vector.shape[0] != 0:
                     vector = vector.reshape(128)
-                    cv2.imwrite("p1/" + name, p1)
-                    result.append(face_embedding(img, p))
+                    cv2.imwrite("p3/" + name, p1)
+                    #result.append(face_embedding(img, p))
+                    result.append(vector)
                     print("추가")
 
 
 
 
     result = np.array(result)
-    np.save("p1/obama.npy", result)
+    np.save("p3/my_face.npy", result)

@@ -231,7 +231,7 @@ def mp_detectFace_v4(img, face_detection, width, height, facedata):
                 distance = -1
             print(distance)
 
-            if 0 <= distance <= 0.12:
+            if 0 <= distance <= 5:
                 cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 3)
                 #print("good")
 
@@ -247,7 +247,7 @@ def mp_detectFace_v4(img, face_detection, width, height, facedata):
                 #print(mean)
                 #result_img_m
                 cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
-                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (b, g, r), -1)
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (r, g, b), -1)
     else:
         result_img = img.copy()
         result_img_m = img.copy()
