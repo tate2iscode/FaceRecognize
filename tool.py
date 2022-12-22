@@ -210,6 +210,8 @@ def mp_detectFace_mosaic(img, face_detection, width, height, facedata):
 def mp_detectFace_v4(img, face_detection, width, height, facedata):
     i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     i.flags.writeable = False
+    print("shape : ",i.shape)
+    print(type(i))
     result = face_detection.process(i)
     if result.detections:
         result_img = img.copy()
@@ -231,24 +233,116 @@ def mp_detectFace_v4(img, face_detection, width, height, facedata):
                 distance = -1
             print(distance)
 
-            if 0 <= distance <= 5:
+            if 0 <= distance <= 0.1:
                 cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 3)
                 #print("good")
 
             else:
-                mean = result_img[y:y+h, x:x+w].copy()
-                sx, sy, sc = mean.shape
-                mean = mean.reshape(sc, sx*sy)
-                b = mean[0].sum() / (sx * sy)
-                g = mean[1].sum() / (sx * sy)
-                r = mean[2].sum() / (sx * sy)
+                #mean = result_img[y:y+h, x:x+w].copy()
+                #sx, sy, sc = mean.shape
+                #mean = mean.reshape(sc, sx*sy)
+                #b = mean[0].sum() / (sx * sy)
+                #g = mean[1].sum() / (sx * sy)
+                #r = mean[2].sum() / (sx * sy)
                 #print(b,g,r)
 
                 #print(mean)
                 #result_img_m
                 cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 0, 255), 3)
-                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (r, g, b), -1)
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (125, 125, 125), -1)
     else:
         result_img = img.copy()
         result_img_m = img.copy()
     return np.hstack((result_img, result_img_m))
+
+def settingFace(img, face_detection, width, height, data):
+    #face_data = []
+    #encode = face_recognition.face_encodings(image)[0]
+    i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    i.flags.writeable = False
+    result = face_detection.process(i)
+    if result.detections:
+        result_img = img.copy()
+        result_img_m = img.copy()
+        for detection in result.detections:
+            x = int(detection.location_data.relative_bounding_box.xmin*width)
+            y = int(detection.location_data.relative_bounding_box.ymin*height)
+            w = int(detection.location_data.relative_bounding_box.width*width)
+            h = int(detection.location_data.relative_bounding_box.height*height)
+            input_pos = {"x": x, "y": y, "w": w, "h": h}
+            cv2.rectangle(result_img, (x, y), (x + w, y + h), (255, 255, 255), 3)
+            vector = face_recognition.face_encodings(result_img[y:y+h, x:x+w].copy())
+            #print("d")
+            vector = np.array(vector)
+            if vector is not None and vector.shape[0] != 0:
+                vector = vector.reshape(128)
+                #print(type(data))
+                data.append(vector)
+                return result_img, data
+
+
+    else:
+        result_img = img.copy()
+        #result_img_m = img.copy()
+    return result_img, data
+
+def detectv5(img, face_detection, facedata):
+    i = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    i.flags.writeable = False
+    #print("shape : ",i.shape)
+    width = i.shape[1]
+    height = i.shape[0]
+    #print("widht", width)
+    #print("height", height)
+    result = face_detection.process(i)
+    if result.detections:
+        result_img = img.copy()
+        result_img_m = img.copy()
+        for detection in result.detections:
+            x = int(detection.location_data.relative_bounding_box.xmin*width)
+            y = int(detection.location_data.relative_bounding_box.ymin*height)
+            w = int(detection.location_data.relative_bounding_box.width*width)
+            h = int(detection.location_data.relative_bounding_box.height*height)
+            input_pos = {"x": x, "y": y, "w": w, "h": h}
+            
+            face_m = result_img_m[y:y+h, x:x+w]
+
+            vector = face_recognition.face_encodings(face_m)
+            vector = np.array(vector)
+
+            distance = 0
+
+            try:
+                distance = (facedata - vector[0])
+                print(vector[0])
+                print(vector[0].shape, facedata.shape)
+                #print(distance)
+                print(np.average(distance))
+
+                distance = np.average(distance)
+            except IndexError:
+                distance = -1
+
+
+            if 0 <= distance <= 0.1:
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                #print("good")
+
+            else:
+                #mean = result_img[y:y+h, x:x+w].copy()
+                #sx, sy, sc = mean.shape
+                #mean = mean.reshape(sc, sx*sy)
+                #b = mean[0].sum() / (sx * sy)
+                #g = mean[1].sum() / (sx * sy)
+                #r = mean[2].sum() / (sx * sy)
+                #print(b,g,r)
+
+                #print(mean)
+                #result_img_m
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (0, 0, 255), 3)
+                cv2.rectangle(result_img_m, (x, y), (x + w, y + h), (125, 125, 125), -1)
+    else:
+        result_img = img.copy()
+        result_img_m = img.copy()
+    #return np.hstack((result_img, result_img_m))
+    return result_img_m
